@@ -27,3 +27,5 @@ want to make a new database, remove the "passman.db" file from the directory.
 
 Source code is also available for review and repackaging at your discretion. Do what you will with the software, it's free,
 intended as a largely academic exercise. Any input regarding the source code is welcome.
+
+For added security confidence, nest the whole program in a Veracrypt volume. At that point, the program could be saving data cleartext and you'd still be safe. Defence in depth and all that.
