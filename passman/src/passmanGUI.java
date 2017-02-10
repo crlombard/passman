@@ -498,6 +498,7 @@ public class passmanGUI extends JFrame{
 							//Push new data onto database.
 							try{
 								main.SQLInsert(newEntry);
+								main.SQLInsertCurrentIV(main.getDBSize());
 							}catch(SQLException f)
 							{
 								System.err.println("SQLInsert Exception thrown after submission of new entry.");

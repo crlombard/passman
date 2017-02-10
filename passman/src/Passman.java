@@ -64,8 +64,8 @@
  *			The search bar at the bottom left of the screen allows for searching
  *			for an entry by any tags it may possess.
   
- *	@date		12/02/2016
- *  @version	Beta v0.02 : KateBait 
+ *	@date		02/05/2016
+ *  @version	Beta v0.03 : KateBait 
  */
 
 package passman;
@@ -98,7 +98,7 @@ public class Passman
     public static void main(String[] args) 
     {
         //Print title and current version.
-        System.out.print("passmanGUI Password Management Software\nBeta v0.02 \"KateBait\": 1/4/2017\n\n");
+        System.out.print("passmanGUI Password Management Software\nBeta v0.03 : 02/05/2016\n\n");
 		boolean createdEntryTable = true;
 		boolean createdClosedTable = true;
 		String loadedPass = "";
@@ -199,6 +199,7 @@ public class Passman
 		char[] plainData = plainStr.toCharArray();
 		try{
 			cipherText = crypt.encrypt(plainStr);
+			//System.out.println("cipherText = " +cipherText);
 		}catch(Exception encryptExcept)
 		{
 			System.err.println("Encryption failed in passmanEncrypt encrypt function.");
@@ -207,6 +208,7 @@ public class Passman
 		
 		try{
 			plainStr = crypt.decrypt(cipherText);
+			//System.out.println("plainStr = " +plainStr);
 		}catch(Exception decryptExcept)
 		{
 			System.err.println("Decryption failed in passmanEncrypt decrypt function.");
@@ -242,9 +244,8 @@ public class Passman
 		return cleartextEntry;
 	}
 	
-	public static entry decrypt(entry cipherEntry)
+	public static entry decrypt(entry cipherEntry, byte[] IV)
 	{
-		//entry cleartextEntry = cipherEntry; 
 		String entryStr = ""; 
 		char[] cipherChars = cipherEntry.getEntry();
 		for(int i = 0; i < cipherChars.length; i++)
@@ -253,6 +254,7 @@ public class Passman
 		}
 		//System.out.println("entryStr size = " +entryStr.length() +"\nentryStr = " +entryStr);
 		
+		crypt.setIV(IV);
 		String decipherStr = crypt.decrypt(entryStr);
 		
 		//System.out.println("decipherStr size = " +decipherStr.length() +"\ndecipherStr = " +decipherStr);
@@ -271,6 +273,12 @@ public class Passman
 	{
 		e = encrypt(e);
 		SQL.insert(e);
+		SQL.insertIV(getDBSize(), crypt.getIV());
+	}
+	
+	public static void SQLInsertCurrentIV(int index) throws SQLException
+	{
+		SQL.insertIV(index, crypt.getIV());
 	}
 	
 	public static int getDBSize()
@@ -301,7 +309,8 @@ public class Passman
 	public static entry get(int cell)
 	{
 		entry e = SQL.get(cell);
-		e = decrypt(e);
+		byte[] IV = SQL.getIV(cell);
+		e = decrypt(e, IV);
 		return e;
 	}
 	
@@ -310,7 +319,7 @@ public class Passman
 		try{
 			e = encrypt(e);
 			SQL.replace(index, e);
-			
+			SQL.insertIV(index, crypt.getIV());
 		}catch(SQLException ex)
 		{
 			System.err.println("passman.SQLite replace exception.");

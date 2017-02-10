@@ -1,13 +1,13 @@
 /**
  * @author	Coleman R. Lombard
  * @file	passmanEncrypt.java
- *			This file contains the passmanEncrypt file, used to provide all 
+ *			This file contains the passmanEncrypt file, used to provide all
  *			cryptographic methods utilized by the passman application.
- * 
+ *
  *  		All member functions are documented in the javadoc style, each comment
  *			block is preceded by a tag "(#)" for ease of searching. To view documentation,
  *			simply search by this tag sequence.
- *			
+ *
  * @date	1/4/2016
  */
 
@@ -41,16 +41,20 @@ public class passmanEncrypt {
 	private static SecretKeySpec secretKey ;
     private static byte[] key ;
     private static byte[] salt;
-	
+	private static IvParameterSpec IV;
+
+	private static SecureRandom r = new SecureRandom();
+	private static Passman main = new Passman();
+
     private static String decryptedString;
     private static String encryptedString;
-	
+
 	/***************************************************************************
-	 * Accessor Methods 
+	 * Accessor Methods
 	 **************************************************************************/
-	
+
 	/*(#) getSalt()
-	 *	  This function returns the class variable salt. Note that salt should 
+	 *	  This function returns the class variable salt. Note that salt should
 	 *	  be a 128 bit array for use in the hashing and encryption functions.
 	 ***************************************************************************
 	 * @param	None.
@@ -63,7 +67,7 @@ public class passmanEncrypt {
 	{
 		return salt;
 	}
-    
+
 	/*(#) getDecryptedString()
 	 *	  This function returns the class variable decryptedString.
 	 ***************************************************************************
@@ -76,7 +80,7 @@ public class passmanEncrypt {
     public static String getDecryptedString() {
         return passmanEncrypt.decryptedString;
     }
-	
+
 	/*(#) getEncryptedString()
 	 *	  This function returns the class variable encryptedString.
 	 ***************************************************************************
@@ -90,10 +94,23 @@ public class passmanEncrypt {
         return passmanEncrypt.encryptedString;
     }
 	
+	/*(#) getIV()
+	 *	  This function returns the class variable IV.
+	 ***************************************************************************
+	 * @param	None.
+	 * @pre		None.
+	 * @post	None.
+	 * @return	Class String encryptedString.
+	 * @throws	None.
+	 */
+    public static byte[] getIV() {
+		return IV.getIV();
+    }
+
 	/***************************************************************************
-	 * Modifier Methods 
+	 * Modifier Methods
 	 **************************************************************************/
-	
+
 	/*(#) setDecryptedString()
 	 *	  This function replaces the class variable decryptedString.
 	 ***************************************************************************
@@ -108,7 +125,7 @@ public class passmanEncrypt {
 	public static void setDecryptedString(String decryptedString) {
         passmanEncrypt.decryptedString = decryptedString;
     }
-	
+
 	/*(#) setEncryptedString()
 	 *	  This function replaces the class variable encryptedString.
 	 ***************************************************************************
@@ -123,7 +140,7 @@ public class passmanEncrypt {
     public static void setEncryptedString(String encryptedString) {
         passmanEncrypt.encryptedString = encryptedString;
     }
-	
+
 	/*(#) setKey()
 	 *	  This function replaces the class variable decryptedString.
 	 ***************************************************************************
@@ -133,7 +150,7 @@ public class passmanEncrypt {
 	 * @return	None.
 	 * @throws	None.
 	 */
-	public static void setKey(String myKey) 
+	public static void setKey(String myKey)
 	{
         MessageDigest sha = null;
         try {
@@ -150,12 +167,29 @@ public class passmanEncrypt {
 		}
     }
 	
+	/*(#) setIV()
+	 *	  This function replaces the class variable setIV.
+	 ***************************************************************************
+	 * @param	byte[] newIV.
+	 * @pre		None.
+	 * @post	Class level setIV variable is replaced with the provided parameter.
+	 * @return	None.
+	 * @throws	None.
+	 */
+    public static void setIV(byte[] newIV) {
+        passmanEncrypt.IV = new IvParameterSpec(newIV);
+    }
+
 	/***************************************************************************
-	 * Public Methods 
+	 * Public Methods
 	 **************************************************************************/
-	
+
 	/*(#) encrypt()
 	 *	  This function encrypts a given string using AES 128 bit ECB encryption.
+	 *	  Note that after encrypting, the IV used is saved in the class variable
+	 *	  IV TEMPORARILY. It should be IMMEDIATELY saved to the database in main.
+	 *	  That is, call encrypt, then IMMEDIATELY call getIV and save it to the
+	 *	  database.
 	 ***************************************************************************
 	 * @param	String strToEncrypt which will be encrypted.
 	 * @pre		None.
@@ -168,9 +202,9 @@ public class passmanEncrypt {
     {
         try
         {
-            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey);
-			//System.out.println(secretKey);
+			IV = generateIV();
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey, IV);
             setEncryptedString(Base64.encodeBase64String(cipher.doFinal(strToEncrypt.getBytes("UTF-8"))));
 			return getEncryptedString();
         }
@@ -180,7 +214,7 @@ public class passmanEncrypt {
         }
         return null;
     }
-	
+
 	/*(#) decrypt()
 	 *	  This function decrypts a given string using AES 128 bit ECB encryption.
 	 ***************************************************************************
@@ -195,11 +229,9 @@ public class passmanEncrypt {
     {
         try
         {
-            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5PADDING");
-            cipher.init(Cipher.DECRYPT_MODE, secretKey);
-			//System.out.println(secretKey);
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, IV);
             setDecryptedString(new String(cipher.doFinal(Base64.decodeBase64(strToDecrypt))));
-			//System.out.println(passmanEncrypt.decryptedString);
 			return getDecryptedString();
         }
         catch (Exception e)
@@ -208,7 +240,7 @@ public class passmanEncrypt {
         }
         return null;
     }
-	
+
 	/*(#) PBKDF2Hash()
 	 *	  This function hashes an input String using the PDKDF2 algorithm with SHA1.
 	 ***************************************************************************
@@ -224,13 +256,13 @@ public class passmanEncrypt {
         int iterations = 1000;
         char[] chars = password.toCharArray();
         salt = inputSalt;
-         
+
         PBEKeySpec spec = new PBEKeySpec(chars, salt, iterations, 64 * 8);
         SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
         byte[] hash = skf.generateSecret(spec).getEncoded();
         return iterations + ":" + toHex(salt) + ":" + toHex(hash);
     }
-	
+
 	/*(#) PBKDF2Hash()
 	 *	  This function hashes an input String using the PDKDF2 algorithm with SHA1.
 	 ***************************************************************************
@@ -245,13 +277,13 @@ public class passmanEncrypt {
         int iterations = 1000;
         char[] chars = password.toCharArray();
         salt = makeSalt();
-         
+
         PBEKeySpec spec = new PBEKeySpec(chars, salt, iterations, 64 * 8);
         SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
         byte[] hash = skf.generateSecret(spec).getEncoded();
         return iterations + ":" + toHex(salt) + ":" + toHex(hash);
     }
-    
+
 	/*(#) makeSalt()
 	 *	  This function generates a salt byte array with 16 byte characters, or
 	 *	  128 bits of data.
@@ -267,13 +299,15 @@ public class passmanEncrypt {
         SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
         byte[] salt = new byte[16];
         sr.nextBytes(salt);
+		
         return salt;
+		
     }
-     
+
 	/***************************************************************************
-	 * Private Utility Methods 
+	 * Private Utility Methods
 	 **************************************************************************/
-	
+
 	/*(#) toHex()
 	 *	  This function converts the parameter to hexadecimal.
 	 ***************************************************************************
@@ -296,5 +330,19 @@ public class passmanEncrypt {
 		{
             return hex;
         }
+    }
+
+	 private static IvParameterSpec generateIV()
+	 {
+        byte[] newSeed = r.generateSeed(16);
+        r.setSeed(newSeed);
+
+        byte[] byteIV = new byte[16];
+        r.nextBytes(byteIV);
+        IV = new IvParameterSpec(byteIV);
+		
+		String foo = new String(byteIV);
+		
+        return IV;
     }
 }
